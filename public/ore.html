@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Ore</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="menu-nav">
+        <button class="close-btn" aria-label="Chiudi menu">&times;</button>
+        <ul>
+            <li><a href="dashboard.html">📊 Dashboard</a></li>
+            <li><a href="index.html">📍 Mappa Cantieri</a></li>
+            <li><a href="ore.html" class="active">🕒 Gestione Ore</a></li>
+            <li><a href="magazzino.html">📦 Gestione Magazzino</a></li>
+            <li><a href="admin-dipendenti.html">👥 Gestione Dipendenti</a></li>
+            <li><a href="admin-pianifica.html">📅 Pianificazione</a></li>
+        </ul>
+    </nav>
+
+    <header class="mobile-header">
+        <button class="hamburger" aria-label="Apri menu">☰</button>
+        <h1>🕒 Inserimento Ore Lavorative</h1>
+    </header>
+
+    <div class="page-wrapper">
+        <main class="main-content">
+            <section class="card">
+                <form id="oreForm" class="form-grid">
+                    <div class="form-group">
+                        <label for="dipendente">Dipendente:</label>
+                        <select id="dipendente" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cantiere">Cantiere:</label>
+                        <select id="cantiere" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="data">Data:</label>
+                        <input type="date" id="data" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ora-inizio">Ora Inizio:</label>
+                        <input type="time" id="ora-inizio" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ora-fine">Ora Fine:</label>
+                        <input type="time" id="ora-fine" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <button type="submit">Salva Ore</button>
+                    </div>
+                </form>
+                <p id="conferma-ore" class="feedback"></p>
+            </section>
+        </main>
+    </div>
+    <!-- assicura gli id nel form:
+         form id="oreForm"
+         select id="seleziona-dipendente"
+         select id="seleziona-cantiere"
+         input type="date" id="seleziona-data"
+         input type="time" id="ora-inizio"
+         input type="time" id="ora-fine"
+         p id="ore-feedback"
+    -->
+    <script src="ore.js"></script>
+    <script src="menu.js"></script>
+  </body>
+</html>

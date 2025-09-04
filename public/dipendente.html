@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Area Personale</title>
+    <link rel="stylesheet" href="ore.css">
+</head>
+<body>
+    <div class="page-wrapper">
+        <main class="main-content">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>Ciao, <span id="nome-dipendente"></span>!</h1>
+                    <p>Questo è il tuo programma di lavoro. Inserisci le ore svolte per ogni giornata.</p>
+                </div>
+                <button id="logout-btn" style="background-color: #e74c3c;">Logout</button>
+            </div>
+            
+            <section class="card">
+                <h2>🗓️ Il Tuo Calendario</h2>
+                <div id="calendario-settimanale">
+                    <p>Caricamento del programma in corso...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="dipendente.js"></script>
+</body>
+</html>

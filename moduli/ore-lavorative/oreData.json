@@ -1,0 +1,50 @@
+[
+  {
+    "dipendente": "Mario Rossi",
+    "cantiere": "Cantiere A",
+    "data": "2025-09-01",
+    "inizio": "08:00",
+    "fine": "17:00",
+    "note": ""
+  },
+  {
+    "dipendente": "Luca Bianchi",
+    "cantiere": "Cantiere B",
+    "data": "2025-09-01",
+    "inizio": "02:18",
+    "fine": "07:22",
+    "note": ""
+  },
+  {
+    "dipendente": "Mario Rossi",
+    "cantiere": "cantiere 2",
+    "data": "2025-09-02",
+    "inizio": "07:59",
+    "fine": "18:58",
+    "note": ""
+  },
+  {
+    "dipendente": "Luca Bianchi",
+    "cantiere": "TESTLUCA",
+    "data": "2025-09-02",
+    "inizio": "07:00",
+    "fine": "18:00",
+    "note": ""
+  },
+  {
+    "dipendente": "Luca Bianchi",
+    "cantiere": "cantiere 3",
+    "data": "2025-09-02",
+    "inizio": "12:06",
+    "fine": "18:10",
+    "note": "Carburante"
+  },
+  {
+    "dipendente": "Luca Bianchi",
+    "cantiere": "cantiere 2",
+    "data": "2025-09-02",
+    "inizio": "13:27",
+    "fine": "17:31",
+    "note": ""
+  }
+]

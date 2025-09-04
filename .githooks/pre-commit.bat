@@ -1,0 +1,6 @@
+@echo off
+echo Running duplicate auto-fix...
+node scripts\check-duplicates.js --fix
+echo Verifica duplicati...
+node scripts\check-duplicates.js
+if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%

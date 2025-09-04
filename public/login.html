@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Accesso Dipendenti</title>
+    <link rel="stylesheet" href="ore.css">
+</head>
+<body>
+    <div class="page-wrapper">
+        <main class="main-content">
+
+            <section class="card">
+                <h1>🔒 Accesso Area Dipendenti</h1>
+                <p>Inserisci le tue credenziali per visualizzare il tuo calendario.</p>
+                
+                <form id="formLogin">
+                    <label for="username">Nome Utente:</label>
+                    <input type="text" id="username" name="username" required>
+                    
+                    <label for="password">Password (codice a 3 cifre):</label>
+                    <input type="password" id="password" name="password" maxlength="3" required>
+                    
+                    <button type="submit">Entra</button>
+                </form>
+
+                <div id="messaggio-errore" style="color: red; margin-top: 15px;"></div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="login.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "name": "cantieri-meteo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "check:dup": "node scripts/check-duplicates.js",
+    "fix:dup": "node scripts/check-duplicates.js --fix",
+    "dup:watch": "node scripts/dup-watch.js",
+    "prepare": "git config core.hooksPath .githooks || true && node scripts/setup-hooks.js",
+    "setup:hooks": "node scripts/setup-hooks.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "mysql2": "^3.14.4",
+    "node-cron": "^4.2.1",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^7.0.5",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

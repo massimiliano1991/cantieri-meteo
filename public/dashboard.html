@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Gestionale Cantieri</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Menu di navigazione laterale -->
+    <nav class="menu-nav">
+        <button class="close-btn" aria-label="Chiudi menu">&times;</button>
+        <ul>
+            <li><a href="dashboard.html" class="active">📊 Dashboard</a></li>
+            <li><a href="index.html">📍 Mappa Cantieri</a></li>
+            <li><a href="ore.html">🕒 Gestione Ore</a></li>
+            <li><a href="magazzino.html">📦 Gestione Magazzino</a></li>
+            <li><a href="admin-dipendenti.html">👥 Gestione Dipendenti</a></li>
+            <li><a href="admin-pianifica.html">📅 Pianificazione</a></li>
+        </ul>
+    </nav>
+
+    <!-- NUOVO: Intestazione visibile solo su mobile -->
+    <header class="mobile-header">
+        <button class="hamburger" aria-label="Apri menu">☰</button>
+        <h1>📊 Dashboard</h1>
+    </header>
+
+    <div class="page-wrapper">
+        <main class="main-content">
+            <!-- Il resto del contenuto rimane invariato -->
+            <h1>📊 Centro di Controllo</h1>
+
+            <section id="notifiche-widget" class="card">
+                <p>Caricamento notifiche...</p>
+            </section>
+
+            <section id="statistiche-veloci" class="card">
+                <h2>Statistiche Rapide</h2>
+                <div class="form-grid" id="dashboard-stats-container">
+                    <p>Caricamento statistiche...</p>
+                </div>
+            </section>
+
+            <!-- NUOVA SEZIONE PER LE SCADENZE -->
+            <section class="card">
+                <h2>💸 Gestione Scadenze</h2>
+                <div id="scadenze-container">
+                    <!-- Form per aggiungere una nuova scadenza -->
+                    <form id="form-nuova-scadenza" class="form-grid">
+                        <div class="form-group">
+                            <label for="scadenza-descrizione">Descrizione:</label>
+                            <input type="text" id="scadenza-descrizione" required placeholder="Es. Fattura fornitore XYZ">
+                        </div>
+                        <div class="form-group">
+                            <label for="scadenza-data">Data Scadenza:</label>
+                            <!-- CORREZIONE: Rimosso il placeholder da qui -->
+                            <input type="date" id="scadenza-data" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="scadenza-importo">Importo (€):</label>
+                            <input type="number" id="scadenza-importo" step="0.01" placeholder="Es. 150.50">
+                        </div>
+                        <div class="form-group">
+                            <label for="scadenza-id">ID Fattura/Pag.:</label>
+                            <input type="text" id="scadenza-id" placeholder="Es. FT-2025-101">
+                        </div>
+                        <div class="form-group full-width">
+                            <button type="submit">Aggiungi Scadenza</button>
+                        </div>
+                    </form>
+                    <div id="feedback-scadenze" style="margin-top: 15px;"></div>
+                    
+                    <!-- Tabella per visualizzare le scadenze -->
+                    <div id="tabella-scadenze" class="table-responsive" style="margin-top: 2rem;">
+                        <p>Caricamento scadenze...</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Andamento Ore Mensili</h2>
+                <canvas id="grafico-ore" style="max-height: 400px;"></canvas>
+            </section>
+
+            <section class="card">
+                <h2>Attività Recenti</h2>
+                <div id="tabella-attivita-recenti" class="table-responsive">
+                    <p>Caricamento attività...</p>
+                </div>
+            </section>
+
+            <!-- NUOVA SEZIONE: PROGRAMMA LAVORO -->
+            <section id="programmaWidget" class="card" style="margin-top:16px;">
+              <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <h2 style="margin:0;font-size:18px;">Programma lavoro</h2>
+                <div id="programmaToggle" role="group" aria-label="Vista">
+                  <button type="button" data-mode="day" class="pg-btn active" title="Giorno">Giorno</button>
+                  <button type="button" data-mode="week" class="pg-btn" title="Settimana">Settimana</button>
+                  <button type="button" data-mode="month" class="pg-btn" title="Mese">Mese</button>
+                </div>
+              </div>
+              <div class="card-body">
+                <table id="tblProgramma" style="width:100%;border-collapse:collapse;">
+                  <thead>
+                    <tr>
+                      <th style="text-align:left;border-bottom:1px solid #eee;padding:8px;">Data</th>
+                      <th style="text-align:left;border-bottom:1px solid #eee;padding:8px;">Cantiere</th>
+                      <th style="text-align:left;border-bottom:1px solid #eee;padding:8px;">Dipendenti</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+                <div id="programmaEmpty" style="display:none;padding:16px;color:#666;">Nessuna pianificazione nel periodo selezionato.</div>
+              </div>
+            </section>
+            <style>
+              /* Stile minimale, evita duplicati di classi comuni */
+              .pg-btn { padding:6px 10px; border:1px solid #ddd; background:#fff; border-radius:8px; cursor:pointer; }
+              .pg-btn + .pg-btn { margin-left:6px; }
+              .pg-btn.active { border-color:#000; background:#000; color:#fff; }
+              #tblProgramma tbody tr:nth-child(even){ background:#fafafa; }
+              #tblProgramma td { padding:8px; border-bottom:1px solid #f0f0f0; }
+            </style>
+        </main>
+    </div>
+
+    <script src="dashboard.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

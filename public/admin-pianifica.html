@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pianificazione Lavori</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.min.css">
+</head>
+<body>
+    <nav class="menu-nav">
+        <button class="close-btn" aria-label="Chiudi menu">&times;</button>
+        <ul>
+            <li><a href="dashboard.html">📊 Dashboard</a></li>
+            <li><a href="index.html">📍 Mappa Cantieri</a></li>
+            <li><a href="ore.html">🕒 Gestione Ore</a></li>
+            <li><a href="magazzino.html">📦 Gestione Magazzino</a></li>
+            <li><a href="admin-dipendenti.html">👥 Gestione Dipendenti</a></li>
+            <li><a href="admin-pianifica.html" class="active">📅 Pianificazione</a></li>
+        </ul>
+    </nav>
+
+    <header class="mobile-header">
+        <button class="hamburger" aria-label="Apri menu">☰</button>
+        <h1>📅 Pianificazione Lavori</h1>
+    </header>
+
+    <div class="page-wrapper">
+        <main class="main-content">
+            <section class="card">
+                <h1>Pianifica Nuovo Lavoro</h1>
+                <form id="pianificaForm" class="form-grid">
+                    <div class="form-group">
+                        <label for="seleziona-cantiere">Seleziona Cantiere:</label>
+                        <select id="seleziona-cantiere" required>
+                            <option value="">Caricamento cantieri...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="seleziona-dipendente">Assegna a Dipendente:</label>
+                        <select id="seleziona-dipendente" required>
+                            <option value="">Caricamento dipendenti...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="seleziona-data">Seleziona Data:</label>
+                        <input type="date" id="seleziona-data" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <button type="submit">Pianifica Lavoro</button>
+                    </div>
+                </form>
+                <p id="conferma-pianificazione" class="feedback"></p>
+            </section>
+
+            <section class="card">
+                <h2>Lavori Pianificati</h2>
+                <div id="tabella-pianificazioni" class="table-responsive">
+                    <p>Caricamento pianificazioni...</p>
+                </div>
+            </section>
+
+            <div class="card" style="margin-top:20px;">
+                <div class="card-body">
+                    <h3>Calendario Pianificazioni</h3>
+                    <div id="calendar" style="min-height:650px;"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Script corretti per questa pagina -->
+    <script src="admin-pianifica.js"></script>
+    <script src="menu.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    <script src="pianifica-calendar.js"></script>
+</body>
+</html>

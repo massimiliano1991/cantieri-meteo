@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Dipendenti</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="menu-nav">
+        <button class="close-btn" aria-label="Chiudi menu">&times;</button>
+        <ul>
+            <li><a href="dashboard.html">📊 Dashboard</a></li>
+            <li><a href="index.html">📍 Mappa Cantieri</a></li>
+            <li><a href="ore.html">🕒 Gestione Ore</a></li>
+            <li><a href="magazzino.html">📦 Gestione Magazzino</a></li>
+            <li><a href="admin-dipendenti.html" class="active">👥 Gestione Dipendenti</a></li>
+            <li><a href="admin-pianifica.html">📅 Pianificazione</a></li>
+        </ul>
+    </nav>
+
+    <header class="mobile-header">
+        <button class="hamburger" aria-label="Apri menu">☰</button>
+        <h1>👥 Gestione Dipendenti</h1>
+    </header>
+
+    <div class="page-wrapper">
+        <main class="main-content">
+            <section class="card">
+                <h2>Aggiungi Nuovo Dipendente</h2>
+                <!-- Il form ora ha l'ID corretto -->
+                <form id="dipendenteForm" class="form-grid">
+                    <div class="form-group">
+                        <label for="nomeCompleto">Nome Completo:</label>
+                        <input type="text" id="nomeCompleto" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="username">Username:</label>
+                        <input type="text" id="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="mansione">Mansione:</label>
+                        <input type="text" id="mansione">
+                    </div>
+                    <div class="form-group">
+                        <label for="cellulare">Cellulare:</label>
+                        <input type="tel" id="cellulare">
+                    </div>
+                    <div class="form-group full-width">
+                        <button type="submit">Aggiungi Dipendente</button>
+                    </div>
+                </form>
+                <!-- Elemento per i messaggi di feedback -->
+                <p id="conferma-dipendente" class="feedback"></p>
+            </section>
+
+            <section class="card">
+              <h2>Dipendenti</h2>
+              <div id="lista-dipendenti" class="table-responsive">
+                <p>Caricamento dipendenti...</p>
+              </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="admin-dipendenti.js"></script>
+    <script src="menu.js"></script>
+</body>
+</html>
