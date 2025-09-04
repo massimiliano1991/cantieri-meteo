@@ -1,156 +1,97 @@
 #!/usr/bin/env node
-/* Scansione duplicati: rotte Express e funzioni con stesso nome (per file).
-   Opzione --fix: rinomina le funzioni duplicate successive alla prima (name__dup1, dup2, …) */
 const fs = require('fs');
 const path = require('path');
 
-const repoRoot = path.resolve(__dirname, '..');
-const targets = ['routes', 'public', 'moduli'];
-const DO_FIX = process.argv.includes('--fix');
+const ROOT = process.cwd();
+const SEP = path.sep;
 
-function walk(dir, out = []) {
-  if (!fs.existsSync(dir)) return out;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, entry.name);
-    if (entry.isDirectory()) walk(p, out);
-    else if (entry.isFile() && p.endsWith('.js')) out.push(p);
+function walk(dir) {
+  const out = [];
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (e.name === 'node_modules' || e.name === '.git') continue;
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) out.push(...walk(p));
+    else if (e.isFile() && p.endsWith('.js')) out.push(p);
   }
   return out;
 }
+function read(p) { try { return fs.readFileSync(p, 'utf8'); } catch { return ''; } }
+function rel(p) { return p.replace(ROOT + SEP, ''); }
 
-function stripComments(src) {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+function parseMounts(files) {
+  const mounts = [];
+  const reqDecl = /(?:const|let|var)\s+([a-zA-Z_$][\w$]*)\s*=\s*require\(\s*['"`]([^'"`]+)['"`]\s*\)/g;
+  const appUseVar = /app\.use\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*([a-zA-Z_$][\w$]*)\s*\)/g;
+  const appUseInline = /app\.use\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*require\s*\(\s*['"`]([^'"`]+)['"`]\s*\)\s*\)/g;
+
+  for (const f of files) {
+    const src = read(f);
+    const vars = new Map();
+    let m;
+    while ((m = reqDecl.exec(src))) {
+      const v = m[1], p = m[2];
+      const resolved = path.resolve(path.dirname(f), p + (p.endsWith('.js') ? '' : '.js'));
+      vars.set(v, resolved);
+    }
+    while ((m = appUseInline.exec(src))) {
+      const prefix = m[1], p = m[2];
+      const resolved = path.resolve(path.dirname(f), p + (p.endsWith('.js') ? '' : '.js'));
+      mounts.push({ file: f, prefix, resolved, exists: fs.existsSync(resolved) });
+    }
+    while ((m = appUseVar.exec(src))) {
+      const prefix = m[1], v = m[2];
+      const resolved = vars.get(v);
+      if (resolved) mounts.push({ file: f, prefix, resolved, exists: fs.existsSync(resolved) });
+    }
+  }
+  return mounts;
 }
 
-function indexToLineCol(text, idx) {
-  const pre = text.slice(0, idx);
-  const lines = pre.split('\n');
-  const line = lines.length;
-  const col = lines[lines.length - 1].length + 1;
-  return { line, col };
-}
-
-function checkFile(filePath) {
-  const srcRaw = fs.readFileSync(filePath, 'utf8');
-  const src = stripComments(srcRaw);
-  const issues = [];
-  const fixes = [];
-
-  // Rotte duplicate
-  const routeRe = /router\.(get|post|put|patch|delete)\s*\(\s*['"`]([^'"`]+)['"`]/g;
-  const routes = new Map();
+function parseRouter(file) {
+  const src = read(file);
+  const out = [];
+  const rre = /router\.(get|post|put|patch|delete)\s*\(\s*['"`]([^'"`]+)['"`]/g;
   let m;
-  while ((m = routeRe.exec(src)) !== null) {
-    const key = `${m[1].toUpperCase()} ${m[2]}`;
-    const pos = indexToLineCol(srcRaw, m.index);
-    if (!routes.has(key)) routes.set(key, []);
-    routes.get(key).push(pos);
-  }
-  for (const [key, locs] of routes.entries()) {
-    if (locs.length > 1) {
-      locs.forEach(loc => {
-        issues.push(`${filePath}:${loc.line}:${loc.col}: [DUP_ROUTE] Definizione rotta duplicata nello stesso file: ${key}`);
-      });
-    }
-  }
-
-  // Funzioni duplicate
-  const fnRe = /\bfunction\s+([A-Za-z_$][\w$]*)\s*\(|\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\(/g;
-  const fnMatches = []; // {name, index, fullMatch}
-  while ((m = fnRe.exec(src)) !== null) {
-    const name = m[1] || m[2];
-    fnMatches.push({ name, index: m.index, full: m[0] });
-  }
-  const byName = new Map();
-  fnMatches.forEach(x => {
-    if (!byName.has(x.name)) byName.set(x.name, []);
-    byName.get(x.name).push(x);
-  });
-
-  for (const [name, arr] of byName.entries()) {
-    if (arr.length > 1) {
-      // Segnala tutte
-      arr.forEach(x => {
-        const pos = indexToLineCol(srcRaw, x.index);
-        issues.push(`${filePath}:${pos.line}:${pos.col}: [DUP_FUNC] Funzione con nome duplicato nello stesso file: ${name}`);
-      });
-
-      // Opzionale: fix rinominando dalla seconda in poi
-      if (DO_FIX) {
-        // Ordina per index e rinomina successive
-        const sorted = arr.slice().sort((a, b) => a.index - b.index);
-        for (let i = 1; i < sorted.length; i++) {
-          const occ = sorted[i];
-          const newName = `${name}__dup${i}`;
-          // Trova nel file originale il token della funzione a quell'indice (ri-usa regex localizzata)
-          // Sostituiamo solo il nome immediatamente dopo "function " oppure dopo "const "
-          const patchRe = new RegExp(`(function\\s+)${name}(\\s*\\()|(const\\s+)${name}(\\s*=\\s*(?:async\\s*)?\\()`, 'g');
-          let replacedOnce = false;
-          const before = srcRaw.slice(0, occ.index);
-          const after = srcRaw.slice(occ.index);
-          const patchedAfter = after.replace(patchRe, (match, g1, g2, g3, g4) => {
-            if (replacedOnce) return match;
-            replacedOnce = true;
-            if (g1) return `${g1}${newName}${g2}`;
-            if (g3) return `${g3}${newName}${g4}`;
-            return match;
-          });
-          if (replacedOnce) {
-            fixes.push({ filePath, content: before + patchedAfter });
-          }
-        }
-      }
-    }
-  }
-
-  // Applica ultimo fix calcolato (se più fix sullo stesso file, tieni l’ultimo stato)
-  if (DO_FIX && fixes.length) {
-    // Lavoriamo sull’ultimo contenuto risultante
-    let content = srcRaw;
-    // Per sicurezza, ricalcola in modo cumulativo
-    const renamePlan = [];
-    for (const [name, arr] of byName.entries()) {
-      if (arr.length > 1) {
-        const sorted = arr.slice().sort((a, b) => a.index - b.index);
-        for (let i = 1; i < sorted.length; i++) {
-          const occ = sorted[i];
-          renamePlan.push({ index: occ.index, name, i });
-        }
-      }
-    }
-    // Ordina decrescente per non invalidare gli indici
-    renamePlan.sort((a, b) => b.index - a.index);
-    for (const r of renamePlan) {
-      const newName = `${r.name}__dup${r.i}`;
-      const after = content.slice(r.index);
-      const patchRe = new RegExp(`(function\\s+)${r.name}(\\s*\\()|(const\\s+)${r.name}(\\s*=\\s*(?:async\\s*)?\\()`);
-      const patchedAfter = after.replace(patchRe, (match, g1, g2, g3, g4) => {
-        if (g1) return `${g1}${newName}${g2}`;
-        if (g3) return `${g3}${newName}${g4}`;
-        return match;
-      });
-      content = content.slice(0, r.index) + patchedAfter;
-    }
-    fs.writeFileSync(filePath, content, 'utf8');
-  }
-
-  return issues;
+  while ((m = rre.exec(src))) out.push({ method: m[1].toUpperCase(), path: m[2], file });
+  return out;
 }
 
-function main() {
-  const files = targets.flatMap(t => walk(path.join(repoRoot, t)));
-  let all = [];
-  files.forEach(f => { all = all.concat(checkFile(f)); });
+(function main() {
+  const files = walk(ROOT);
+  const mounts = parseMounts(files).filter(m => m.exists);
+  const routerFiles = Array.from(new Set(mounts.map(m => m.resolved)));
+  const endpoints = [];
 
-  if (all.length) {
-    console.error('Trovati duplicati:');
-    all.forEach(l => console.error(l));
-    process.exit(DO_FIX ? 0 : 2);
+  for (const rf of routerFiles) {
+    const routes = parseRouter(rf);
+    const mountsFor = mounts.filter(m => m.resolved === rf);
+    for (const r of routes) {
+      for (const m of mountsFor) {
+        const full = (m.prefix.replace(/\/+$/,'') + '/' + r.path.replace(/^\/+/, '')).replace(/\/{2,}/g,'/');
+        endpoints.push({ method: r.method, path: full, file: rf, mountFrom: m.file });
+      }
+    }
+  }
+
+  const dupMap = new Map();
+  for (const e of endpoints) {
+    const k = `${e.method} ${e.path}`;
+    const arr = dupMap.get(k) || [];
+    arr.push(e);
+    dupMap.set(k, arr);
+  }
+  const dups = Array.from(dupMap.values()).filter(a => a.length > 1);
+
+  if (dups.length) {
+    console.log('ERROR: Duplicate routes');
+    for (const group of dups) {
+      const k = `${group[0].method} ${group[0].path}`;
+      console.log(`  ${k}`);
+      group.forEach(e => console.log(`    - ${rel(e.file)} (mounted from ${rel(e.mountFrom)})`));
+    }
+    process.exit(1);
   } else {
-    console.log('OK: nessun duplicato rilevato in rotte e funzioni (per file).');
+    console.log('Duplicate check: PASS');
+    process.exit(0);
   }
-}
-
-main();
+})();

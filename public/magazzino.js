@@ -287,10 +287,231 @@ function ensureDrawerUI() {
   });
 }
 
+// Normalizza chiavi: case-insensitive, senza spazi/underscore/puntini
+function _normKey(k) { return String(k).toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function _pickAny(obj, aliases) {
+  if (!obj) return undefined;
+  const dict = new Map(Object.keys(obj).map(k => [_normKey(k), k]));
+  for (const a of aliases) {
+    const key = dict.get(_normKey(a));
+    if (key !== undefined) return obj[key];
+  }
+  return undefined;
+}
+
+function getNome(a) {
+  // aggiunti sinonimi comuni: PRODOTTO, TITOLO, ARTICOLO, ecc.
+  return _pickAny(a, ['NomeArticolo','ARTICOLO','Articolo','articolo','nome','Nome','descrizione','Descrizione','prodotto','titolo']) ?? '';
+}
+function getCategoria(a) {
+  return _pickAny(a, ['Categoria','categoria','reparto','gruppo','tipo']) ?? '';
+}
+function getQta(a) {
+  const v = _pickAny(a, ['Quantita','quantita','QTA','qta','Giacenza','disponibile','qty','quantity']);
+  return Number(v ?? 0) || 0;
+}
+function getSoglia(a) {
+  const v = _pickAny(a, ['SogliaMinima','soglia_minima','Soglia','soglia','ScortaMinima','minimo','threshold']);
+  return v == null || v === '' ? null : (Number(v) || 0);
+}
+function getUM(a) {
+  return _pickAny(a, ['UnitaMisura','UM','um','Unita','unita','misura']) ?? '';
+}
+function getPrezzo(a) {
+  const v = _pickAny(a, ['PrezzoUnitario','prezzo_unitario','Prezzo','prezzo','CostoUnitario','costo','price','unitprice']);
+  return v == null || v === '' ? null : Number(v);
+}
+
+// Sostituisce le chiamate “/api/…”: lavora solo con gli endpoint esistenti /magazzino/*
+async function loadKpiMagazzino() {
+  try {
+    const articoli = await fetchArticoli(); // usa già API = '/magazzino'
+    const tot = articoli.length;
+    const sotto = articoli.filter(a => {
+      const q = getQta(a);
+      const s = getSoglia(a);
+      return s != null && q <= s;
+    }).length;
+
+    const elS = document.getElementById('kpiSottoSoglia');
+    if (elS) elS.textContent = String(sotto);
+
+    const elV = document.getElementById('kpiValoreTotale');
+    if (elV) {
+      // valore totale se disponibile il prezzo
+      const valore = articoli.reduce((acc, a) => {
+        const p = getPrezzo(a);
+        return acc + (p != null ? getQta(a) * p : 0);
+      }, 0);
+      elV.textContent = valore ? valore.toFixed(2) : '-';
+    }
+  } catch (e) {
+    console.error('KPI Magazzino:', e);
+  }
+}
+
+async function loadSottoSoglia() {
+  try {
+    const rows = (await fetchArticoli())
+      .filter(a => {
+        const q = getQta(a);
+        const s = getSoglia(a);
+        return s != null && q <= s;
+      });
+
+    const tbody = document.querySelector('#tblSottoSoglia tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    rows.forEach(a => {
+      const tr = document.createElement('tr');
+      const prezzo = getPrezzo(a);
+      tr.innerHTML = `
+        <td>${getNome(a)}</td>
+        <td style="text-align:right">${getQta(a)}</td>
+        <td style="text-align:right">${getSoglia(a) ?? '-'}</td>
+        <td>${getUM(a)}</td>
+        <td style="text-align:right">${prezzo != null ? prezzo.toFixed(2) : '-'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const el = document.getElementById('kpiSottoSoglia');
+    if (el) el.textContent = String(rows.length);
+  } catch (e) {
+    console.error('Sotto soglia:', e);
+  }
+}
+
+async function loadInventario() {
+  const container = document.getElementById('tabella-magazzino');
+  try {
+    const rows = await fetchArticoli(); // stessa sorgente già usata dalla tabella principale
+    if (!container) return;
+    if (!rows.length) { container.innerHTML = '<p>Nessun articolo.</p>'; return; }
+
+    const thead = '<tr><th>Articolo</th><th>Categoria</th><th>Q.tà</th><th>Soglia</th><th>UM</th><th>Prezzo</th></tr>';
+    const tbody = rows.map(a => `
+      <tr>
+        <td>${getNome(a)}</td>
+        <td>${getCategoria(a)}</td>
+        <td style="text-align:right">${getQta(a)}</td>
+        <td style="text-align:right">${getSoglia(a) ?? '-'}</td>
+        <td>${getUM(a)}</td>
+        <td style="text-align:right">${getPrezzo(a) != null ? getPrezzo(a).toFixed(2) : '-'}</td>
+      </tr>
+    `).join('');
+    container.innerHTML = `<table class="table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+  } catch (e) {
+    console.error('Inventario:', e);
+    if (container) container.innerHTML = '<p>Errore nel caricamento inventario.</p>';
+  }
+}
+
+// Inizializzazione: riusa il tuo flusso esistente
 document.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('tabella-magazzino');
   const form = document.getElementById('magazzinoForm');
 
   carica(container).then(() => ensureDrawerUI());
   if (form) form.addEventListener('submit', onAggiungi);
+  loadKpiMagazzino();
+  loadSottoSoglia();
+  loadInventario();
+  bindFormMagazzino();
+  bindMovimentoRapidoButton();
 });
+
+function bindFormMagazzino() {
+  const form = document.getElementById('magazzinoForm');
+  const btn = document.getElementById('btnAggiungiArticolo'); // opzionale
+
+  // valori default utili
+  const qty = document.getElementById('quantita');
+  const soglia = document.getElementById('soglia-minima');
+  if (qty && !qty.value) qty.value = 1;
+  if (soglia && !soglia.value) soglia.value = 1;
+
+  const handler = async (e) => {
+    e.preventDefault();
+    try {
+      // riusa la tua logica di aggiunta
+      await onAggiungi(e);
+      // aggiorna viste se presenti
+      if (typeof carica === 'function') {
+        const cont = document.getElementById('tabella-magazzino');
+        await carica(cont);
+      }
+      if (typeof loadKpiMagazzino === 'function') await loadKpiMagazzino();
+      if (typeof loadSottoSoglia === 'function') await loadSottoSoglia();
+
+      if (form) form.reset();
+      if (qty) qty.value = 1;
+      if (soglia) soglia.value = 1;
+    } catch (err) {
+      console.error('bindFormMagazzino:', err);
+    }
+  };
+
+  if (form) form.addEventListener('submit', handler);
+  if (btn) btn.addEventListener('click', handler);
+}
+
+async function postJson(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify(body || {})
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+// Movimento rapido via prompt (semplice e immediato)
+async function doMovimentoRapido() {
+  try {
+    const nome = prompt('Articolo (nome esatto):');
+    if (!nome) return;
+
+    let tipo = prompt("Tipo movimento: 'carico', 'scarico' o 'rettifica'").trim().toLowerCase();
+    if (!['carico','scarico','rettifica'].includes(tipo)) { alert('Tipo non valido'); return; }
+
+    const q = Number(prompt('Quantità (numero > 0):'));
+    if (!Number.isFinite(q) || q <= 0) { alert('Quantità non valida'); return; }
+
+    const note = prompt('Note (opzionale):') || null;
+
+    await postJson('/magazzino/movimenti', { nome, tipo, quantita: q, note });
+
+    // refresh viste
+    try { if (typeof fetchArticoli === 'function') await fetchArticoli(); } catch {}
+    try { if (typeof carica === 'function') await carica(document.getElementById('tabella-magazzino')); } catch {}
+    try { if (typeof loadKpiMagazzino === 'function') await loadKpiMagazzino(); } catch {}
+    try { if (typeof loadSottoSoglia === 'function') await loadSottoSoglia(); } catch {}
+
+    alert('Movimento registrato.');
+  } catch (err) {
+    console.error('doMovimentoRapido:', err);
+    alert('Errore nel movimento.');
+  }
+}
+
+// Cerca e collega il bottone “Movimento Rapido”
+function bindMovimentoRapidoButton() {
+  const tryBind = () => {
+    // id esplicito, data-attr o match sul testo
+    const byId = document.getElementById('movimento-rapido');
+    const byData = document.querySelector('[data-action="movimento-rapido"]');
+    const byText = Array.from(document.querySelectorAll('button'))
+      .find(b => (b.textContent || '').trim().toLowerCase() === 'movimento rapido');
+
+    const btn = byId || byData || byText;
+    if (btn && !btn._movRapidBound) {
+      btn.addEventListener('click', (e) => { e.preventDefault(); doMovimentoRapido(); });
+      btn._movRapidBound = true;
+    }
+  };
+  tryBind();
+  // tenta di nuovo dopo eventuale rendering dinamico
+  setTimeout(tryBind, 500);
+}

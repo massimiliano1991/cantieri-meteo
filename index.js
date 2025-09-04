@@ -11,7 +11,7 @@ const cantieriRoutes = require("./moduli/cantieri/cantieriRoutes.js");
 const dipendentiRoutes = require('./routes/dipendenti.js');
 const dashboardRoutes = require('./routes/dashboard.js');
 const scadenzeRoutes = require('./routes/scadenze.js');
-const magazzinoRoutes = require('./moduli/magazzino/magazzinoRoutes.js'); 
+const magazzinoRoutes = require('./routes/magazzino'); 
 const oreRoutes = require('./moduli/ore-lavorative/oreRoutes.js');
 
 // --- 2. CREAZIONE E CONFIGURAZIONE APP EXPRESS ---

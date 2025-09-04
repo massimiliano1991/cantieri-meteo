@@ -2,34 +2,11 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Check: Duplicati (rotte + funzioni)",
+      "label": "Check: Duplicati (rotte)",
       "type": "shell",
       "command": "node",
       "args": ["scripts/check-duplicates.js"],
-      "group": "build",
-      "problemMatcher": {
-        "owner": "dup-check",
-        "fileLocation": "absolute",
-        "pattern": {
-          "regexp": "^(.*):(\\d+):(\\d+):\\s(\\[[^\\]]+\\])\\s(.*)$",
-          "file": 1,
-          "line": 2,
-          "column": 3,
-          "code": 4,
-          "message": 5
-        }
-      }
-    },
-    {
-      "label": "Fix: Duplicati",
-      "type": "shell",
-      "command": "node",
-      "args": ["scripts/check-duplicates.js", "--fix"]
-    },
-    {
-      "label": "Dup: Fix+Check",
-      "dependsOrder": "sequence",
-      "dependsOn": ["Fix: Duplicati", "Check: Duplicati (rotte + funzioni)"]
+      "group": "build"
     },
     {
       "label": "Dup: Watch (auto)",
@@ -37,7 +14,14 @@
       "command": "node",
       "args": ["scripts/dup-watch.js"],
       "isBackground": true,
-      "runOn": "folderOpen",
+      "runOptions": { "runOn": "folderOpen" },
+      "presentation": { "reveal": "never", "panel": "dedicated" }
+    },
+    {
+      "label": "Guard (pre-change)",
+      "type": "npm",
+      "script": "guard",
+      "runOptions": { "runOn": "folderOpen" },
       "presentation": { "reveal": "never", "panel": "dedicated" }
     }
   ]

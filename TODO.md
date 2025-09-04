@@ -1,27 +1,31 @@
-# Roadmap operativa
+# TODO e Roadmap (Sprint 1)
 
-Sprint 1 — Stabilizzazione (Pianificazione + Magazzino V1)
-- [ ] Fix date pianificazioni: backend espone ISO + DataIt (dd/mm/yyyy) per tabella.
-- [ ] Cantieri: GET /nomi (completato), verifica montaggio route.
-- [ ] Magazzino Articoli: CRUD (GET/POST/PUT/DELETE) — completato file route e JS base.
-- [ ] Magazzino UI: tabella con badge stato (OK/Sotto soglia/Critico), form aggiunta.
-- [ ] Endpoint KPI magazzino: count sotto soglia, valore totale (stub).
-- [ ] Documentare API correnti in docs/API.md.
+Stato attuale
+- [x] Hook pre-commit: fix+check duplicati.
+- [x] Magazzino: KPI e “sotto soglia” lato client da /magazzino/articoli.
+- [x] Inventario corrente UI.
+- [x] Fix bindFormMagazzino e normalizzazione chiavi articoli.
+- [x] Docs: aggiornato docs/API.md con sezione Movimenti.
+
+In corso
+- [ ] Magazzino: movimenti base (carico/scarico/rettifica) con transazione e aggiornamento giacenza.
+
+Prossimi task (Sprint 1)
+- [ ] Magazzino UI: badge stato riga (OK/Sotto soglia/Critico) e drawer “Movimento rapido”.
+- [ ] Pianificazione: API con date ISO + render dd/mm/yyyy; prevenzione conflitti base.
+- [ ] Cantieri: completare /cantieri/nomi e scheda cantiere con mappa/meteo.
+- [ ] Home: card KPI (lavori oggi, ore pianificate, articoli critici).
+- [ ] Test end‑to‑end base sul flusso magazzino.
 - [ ] Aggiungere .vscode/tasks.json e launch.json (debug).
 
+Nice to have
+- [ ] Ordinamento per rapporto Q.tà/Soglia.
+- [ ] Formattazione prezzo in € e valore totale magazzino (se disponibile lato dati).
+
 Sprint 2 — Foglio Ore + Home
-- [ ] Foglio ore: vista settimanale per dipendente, filtri admin per cantiere/periodo.
-- [ ] Home: card KPI (lavori oggi, articoli critici, scadenze), programma giorno/settimana/mese.
-- [ ] Report “consumi per cantiere” (scarichi aggregati per cantiere e periodo).
-
-Sprint 3 — Magazzino V2
-- [ ] Aggiungere costo_unitario nei movimenti + valore magazzino (costo medio).
-- [ ] Fornitori (tabella e UI) e integrazione acquisti base.
-- [ ] Alert sotto soglia (in‑app).
-
-Sprint 4 — Mobile + Meteo
-- [ ] Layout responsive, mappa cantieri + layer meteo in Home.
-- [ ] Notifiche WS/email opzionali.
+- [ ] Foglio ore: vista settimanale per dipendente; filtri admin per cantiere/periodo.
+- [ ] KPI Home + notifiche base (sotto soglia, meteo).
+- [ ] Report consumi per cantiere.
 
 Note
-- Tenere UI pulita, azioni rapide in evidenza, feedback immediati.
+- Aggiorna questa lista a fine giornata (DONE/NEXT). Tag supportati da Todo Tree: TODO, NEXT, FIXME, SPRINT, ROADMAP.

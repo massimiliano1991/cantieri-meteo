@@ -484,4 +484,209 @@ router.get('/api/overview', async (_req, res) => {
   }
 });
 
+// ---- MAGAZZINO: meta dinamica (tabella e colonne) ----
+let magMetaCache = null;
+async function getExistingTable(candidates) {
+  const [rows] = await db.query(
+    'SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE()'
+  );
+  const names = rows.map(r => r.TABLE_NAME.toLowerCase());
+  for (const c of candidates) {
+    const i = names.indexOf(c.toLowerCase());
+    if (i >= 0) return rows[i].TABLE_NAME || c;
+  }
+  return null;
+}
+async function ensureMagazzinoSchema() {
+  if (magMetaCache) return magMetaCache;
+
+  // Trova tabella esistente o crea "Magazzino" base
+  let table = await getExistingTable(['Magazzino', 'Articoli', 'Prodotti']);
+  if (!table) {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS \`Magazzino\` (
+        \`ID\` int(11) NOT NULL AUTO_INCREMENT,
+        \`NomeArticolo\` varchar(255) NOT NULL,
+        \`Quantita\` decimal(18,3) NOT NULL DEFAULT 0,
+        \`SogliaMinima\` decimal(18,3) NOT NULL DEFAULT 0,
+        \`PrezzoUnitario\` decimal(18,2) NOT NULL DEFAULT 0,
+        \`UnitaMisura\` varchar(16) DEFAULT 'pz',
+        \`TimestampCreazione\` timestamp NOT NULL DEFAULT current_timestamp(),
+        PRIMARY KEY (\`ID\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    table = 'Magazzino';
+  }
+
+  // Colonne presenti
+  const [colsRows] = await db.query(
+    'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?',
+    [table]
+  );
+  const cols = colsRows.map(c => c.COLUMN_NAME);
+  const has = name => cols.some(c => c.toLowerCase() === name.toLowerCase());
+  // Aggiunge colonne opzionali se mancano
+  const toAdd = [];
+  if (!has('Categoria'))     toAdd.push('ADD COLUMN `Categoria` varchar(100) DEFAULT NULL');
+  if (!has('Fornitore'))     toAdd.push('ADD COLUMN `Fornitore` varchar(255) DEFAULT NULL');
+  if (!has('Note'))          toAdd.push('ADD COLUMN `Note` varchar(255) DEFAULT NULL');
+  if (toAdd.length) await db.query(`ALTER TABLE \`${table}\` ${toAdd.join(', ')}`);
+
+  const pick = (cands) => {
+    const m = new Map(colsRows.map(r => [r.COLUMN_NAME.toLowerCase(), r.COLUMN_NAME]));
+    for (const c of cands) { const f = m.get(c.toLowerCase()); if (f) return f; }
+    return null;
+  };
+
+  const idCol    = pick(['ID', 'IdArticolo', 'Id']);
+  const nameCol  = pick(['NomeArticolo', 'Nome', 'Descrizione', 'Titolo']);
+  const qtyCol   = pick(['Quantita', 'Giacenza', 'Qta', 'Disponibile']);
+  const minCol   = pick(['SogliaMinima', 'ScortaMinima', 'Minimo', 'Soglia']);
+  const priceCol = pick(['PrezzoUnitario', 'CostoUnitario', 'Prezzo', 'Costo']);
+  const umCol    = pick(['UnitaMisura', 'UM', 'Unita']);
+  const catCol   = pick(['Categoria']);
+  const fornCol  = pick(['Fornitore']);
+  const noteCol  = pick(['Note']);
+
+  magMetaCache = { table, idCol, nameCol, qtyCol, minCol, priceCol, umCol, catCol, fornCol, noteCol };
+  return magMetaCache;
+}
+
+// GET KPI Magazzino (sotto soglia + totale)
+router.get('/api/magazzino/kpi', async (_req, res) => {
+  try {
+    const m = await ensureMagazzinoSchema();
+    if (!m.qtyCol || !m.minCol) {
+      return res.json({ articoli: 0, sottoSoglia: 0, valoreTotale: null });
+    }
+    const [[{ tot }]] = await db.query(`SELECT COUNT(*) AS tot FROM \`${m.table}\``);
+    const [[{ ss }]]  = await db.query(
+      `SELECT COUNT(*) AS ss FROM \`${m.table}\` WHERE \`${m.qtyCol}\` <= \`${m.minCol}\` AND \`${m.minCol}\` IS NOT NULL`
+    );
+
+    let valore = null;
+    if (m.priceCol) {
+      const [[{ v }]] = await db.query(
+        `SELECT SUM(\`${m.qtyCol}\` * \`${m.priceCol}\`) AS v FROM \`${m.table}\``
+      );
+      valore = v !== null ? Number(v) : null;
+    }
+    res.json({ articoli: tot, sottoSoglia: ss, valoreTotale: valore });
+  } catch (err) {
+    console.error('GET /dashboard/api/magazzino/kpi ->', err);
+    res.status(500).json({ message: 'Errore KPI magazzino.' });
+  }
+});
+
+// GET elenco sotto soglia
+router.get('/api/magazzino/sotto-soglia', async (_req, res) => {
+  try {
+    const m = await ensureMagazzinoSchema();
+    if (!m.qtyCol || !m.minCol) return res.json([]);
+    const sql = `
+      SELECT 
+        ${m.idCol ? '`' + m.idCol + '` AS ID,' : ''} 
+        ${m.nameCol ? '`' + m.nameCol + '` AS Nome,' : 'NULL AS Nome,'}
+        \`${m.qtyCol}\` AS Quantita,
+        \`${m.minCol}\` AS SogliaMinima
+        ${m.umCol ? ', `' + m.umCol + '` AS Unita' : ''}
+        ${m.priceCol ? ', `' + m.priceCol + '` AS PrezzoUnitario' : ''}
+      FROM \`${m.table}\`
+      WHERE \`${m.qtyCol}\` <= \`${m.minCol}\` AND \`${m.minCol}\` IS NOT NULL
+      ORDER BY (\`${m.qtyCol}\` / NULLIF(\`${m.minCol}\`,0)) ASC
+    `;
+    const [rows] = await db.query(sql);
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /dashboard/api/magazzino/sotto-soglia ->', err);
+    res.status(500).json({ message: 'Errore elenco sotto soglia.' });
+  }
+});
+
+// Inserisci/aggiorna articolo (idempotente per NomeArticolo)
+router.post('/api/magazzino', async (req, res) => {
+  try {
+    const m = await ensureMagazzinoSchema();
+    if (!m.nameCol || !m.qtyCol || !m.minCol) {
+      return res.status(400).json({ message: 'Schema magazzino non valido.' });
+    }
+    const nome = String(req.body?.nome ?? '').trim();
+    if (!nome) return res.status(400).json({ message: 'Nome articolo obbligatorio.' });
+
+    const qta = Number(req.body?.quantita ?? 0) || 0;
+    const soglia = Number(req.body?.sogliaMinima ?? 0) || 0;
+    const categoria = req.body?.categoria ?? null;
+    const fornitore = req.body?.fornitore ?? null;
+    const note = req.body?.note ?? null;
+
+    // cerca per nome (case-insensitive)
+    const [found] = await db.query(
+      `SELECT \`${m.idCol}\` AS ID, \`${m.qtyCol}\` AS Quantita, \`${m.minCol}\` AS SogliaMinima 
+       FROM \`${m.table}\` WHERE LOWER(\`${m.nameCol}\`) = LOWER(?) LIMIT 1`,
+      [nome]
+    );
+
+    if (found.length) {
+      const row = found[0];
+      await db.query(
+        `UPDATE \`${m.table}\` 
+         SET \`${m.qtyCol}\` = \`${m.qtyCol}\` + ?, \`${m.minCol}\` = GREATEST(\`${m.minCol}\`, ?)
+             ${m.catCol ? `, \`${m.catCol}\` = COALESCE(?, \`${m.catCol}\`)` : ''}
+             ${m.fornCol ? `, \`${m.fornCol}\` = COALESCE(?, \`${m.fornCol}\`)` : ''}
+             ${m.noteCol ? `, \`${m.noteCol}\` = COALESCE(?, \`${m.noteCol}\`)` : ''}
+         WHERE \`${m.idCol}\` = ?`,
+        m.catCol && m.fornCol && m.noteCol
+          ? [qta, soglia, categoria, fornitore, note, row.ID]
+          : m.catCol && m.fornCol
+          ? [qta, soglia, categoria, fornitore, row.ID]
+          : m.catCol
+          ? [qta, soglia, categoria, row.ID]
+          : [qta, soglia, row.ID]
+      );
+      return res.json({ action: 'updated', id: row.ID });
+    } else {
+      const cols = [m.nameCol, m.qtyCol, m.minCol];
+      const vals = [nome, qta, soglia];
+      if (m.catCol)   { cols.push(m.catCol);   vals.push(categoria); }
+      if (m.fornCol)  { cols.push(m.fornCol);  vals.push(fornitore); }
+      if (m.noteCol)  { cols.push(m.noteCol);  vals.push(note); }
+      if (m.umCol)    { cols.push(m.umCol);    vals.push('pz'); }
+      if (m.priceCol) { cols.push(m.priceCol); vals.push(0); }
+
+      const placeholders = cols.map(() => '?').join(', ');
+      const [ins] = await db.query(
+        `INSERT INTO \`${m.table}\` (${cols.map(c => `\`${c}\``).join(', ')}) VALUES (${placeholders})`,
+        vals
+      );
+      return res.json({ action: 'inserted', id: ins.insertId });
+    }
+  } catch (err) {
+    console.error('POST /dashboard/api/magazzino ->', err);
+    res.status(500).json({ message: 'Errore inserimento magazzino.' });
+  }
+});
+
+// Inventario completo
+router.get('/api/magazzino/inventario', async (_req, res) => {
+  try {
+    const m = await ensureMagazzinoSchema();
+    const cols = [
+      m.idCol ? `\`${m.idCol}\` AS ID` : 'NULL AS ID',
+      m.nameCol ? `\`${m.nameCol}\` AS NomeArticolo` : 'NULL AS NomeArticolo',
+      m.catCol ? `\`${m.catCol}\` AS Categoria` : 'NULL AS Categoria',
+      m.qtyCol ? `\`${m.qtyCol}\` AS Quantita` : 'NULL AS Quantita',
+      m.minCol ? `\`${m.minCol}\` AS SogliaMinima` : 'NULL AS SogliaMinima',
+      m.umCol ? `\`${m.umCol}\` AS UnitaMisura` : 'NULL AS UnitaMisura',
+      m.priceCol ? `\`${m.priceCol}\` AS PrezzoUnitario` : 'NULL AS PrezzoUnitario',
+      m.fornCol ? `\`${m.fornCol}\` AS Fornitore` : 'NULL AS Fornitore',
+      m.noteCol ? `\`${m.noteCol}\` AS Note` : 'NULL AS Note'
+    ].join(', ');
+    const [rows] = await db.query(`SELECT ${cols} FROM \`${m.table}\` ORDER BY ${m.nameCol ? `\`${m.nameCol}\`` : '1'} ASC`);
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /dashboard/api/magazzino/inventario ->', err);
+    res.status(500).json({ message: 'Errore inventario magazzino.' });
+  }
+});
+
 module.exports = router;

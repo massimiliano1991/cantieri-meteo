@@ -8,9 +8,11 @@
     "dev": "nodemon index.js",
     "check:dup": "node scripts/check-duplicates.js",
     "fix:dup": "node scripts/check-duplicates.js --fix",
+    "dup:check": "node scripts/check-duplicates.js",
     "dup:watch": "node scripts/dup-watch.js",
     "prepare": "git config core.hooksPath .githooks || true && node scripts/setup-hooks.js",
-    "setup:hooks": "node scripts/setup-hooks.js"
+    "setup:hooks": "node scripts/setup-hooks.js",
+    "guard": "node scripts/guard.js"
   },
   "keywords": [],
   "author": "",

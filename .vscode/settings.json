@@ -1,0 +1,17 @@
+{
+  "todo-tree.general.tags": ["TODO", "FIXME", "NEXT", "SPRINT", "ROADMAP"],
+  "todo-tree.tree.showCountsInTree": true,
+  "todo-tree.general.showCountsInStatusBar": true,
+  "todo-tree.general.statusBar": "total",
+  "todo-tree.highlights.defaultHighlight": {
+    "icon": "check",
+    "type": "text",
+    "foreground": "white",
+    "background": "#2563eb"
+  },
+  "todo-tree.highlights.customHighlight": {
+    "NEXT": { "icon": "flame", "foreground": "#111827", "background": "#fde047" },
+    "FIXME": { "icon": "alert", "background": "#ef4444" }
+  },
+  "markdown.preview.breaks": true
+}
