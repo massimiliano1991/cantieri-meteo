@@ -1,5 +1,19 @@
 /* eslint-env browser, es2021 */
-const API = '/magazzino';
+
+// Mappa endpoint
+const API = {
+  articoli: '/magazzino/articoli',
+  movimenti: '/magazzino/movimenti',
+};
+
+async function fetchJson(url, options) {
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`HTTP ${res.status} ${res.statusText} on ${url}\n${text}`);
+  }
+  return res.json();
+}
 
 function safe(v) {
   return v === undefined || v === null || v === '' ? '-' : v;
@@ -8,7 +22,7 @@ function safe(v) {
 let _cacheArticoli = [];
 
 async function fetchArticoli() {
-  const res = await fetch(`${API}/articoli`);
+  const res = await fetch(`${API.articoli}`);
   if (!res.ok) throw new Error('Errore caricamento articoli');
   const data = await res.json();
   _cacheArticoli = Array.isArray(data) ? data : [];
@@ -83,7 +97,7 @@ async function onAggiungi(e) {
   };
 
   try {
-    const res = await fetch(`${API}/articoli`, {
+    const res = await fetch(`${API.articoli}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -113,7 +127,7 @@ async function onElimina(ev) {
   if (!id) return;
   if (!confirm(`Eliminare l'articolo ID ${id}?`)) return;
   try {
-    const res = await fetch(`${API}/articoli/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${API.articoli}/${id}`, { method: 'DELETE' });
     const out = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(out.message || 'Errore eliminazione');
     await carica(document.getElementById('tabella-magazzino'));
@@ -149,7 +163,7 @@ async function onModifica(ev) {
   if (note === null) return;
 
   try {
-    const res = await fetch(`${API}/articoli/${id}`, {
+    const res = await fetch(`${API.articoli}/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nome_articolo: nome, categoria, quantita, soglia_minima: soglia, fornitore, note })
@@ -269,7 +283,7 @@ function ensureDrawerUI() {
       payload.nuova_quantita = Number(nv);
     }
     try {
-      const res = await fetch(`${API}/movimenti`, {
+      const res = await fetch(`${API.movimenti}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -515,3 +529,70 @@ function bindMovimentoRapidoButton() {
   // tenta di nuovo dopo eventuale rendering dinamico
   setTimeout(tryBind, 500);
 }
+
+// Trova il bottone “Movimento Rapido” anche se non ha id
+(function wireMovimentoRapido() {
+  const btn = document.querySelector('#btnMovimentoRapido') ||
+              [...document.querySelectorAll('button,a')].find(el => /movimento\s*rapido/i.test(el.textContent || ''));
+  if (!btn) return;
+
+  const backdrop = document.getElementById('mr-backdrop');
+  const form = document.getElementById('mr-form');
+  const selArt = document.getElementById('mr-articolo');
+  const qty = document.getElementById('mr-quantita');
+  const note = document.getElementById('mr-note');
+  const cancel = document.getElementById('mr-cancel');
+  const submit = document.getElementById('mr-submit');
+
+  const openModal = async () => {
+    try {
+      // carica articoli nel select
+      selArt.innerHTML = '<option value="">Caricamento…</option>';
+      const articoli = await fetchJson(API.articoli).catch(() => []);
+      selArt.innerHTML = '<option value="" disabled selected>Seleziona…</option>' +
+        articoli.map(a => `<option value="${a.id || a.articoloId || a.codice}">${a.nome || a.descrizione || a.codice}</option>`).join('');
+      qty.value = '';
+      note.value = '';
+      backdrop.style.display = 'block';
+    } catch (e) {
+      console.error('Caricamento articoli fallito', e);
+      alert('Impossibile caricare gli articoli.');
+    }
+  };
+
+  const closeModal = () => (backdrop.style.display = 'none');
+
+  btn.addEventListener('click', (e) => { e.preventDefault(); openModal(); });
+  cancel?.addEventListener('click', closeModal);
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const articoloId = selArt.value;
+    const quantita = Number(qty.value);
+    const tipo = (form.querySelector('input[name="mr-tipo"]:checked')?.value) || 'entrata';
+    if (!articoloId || !Number.isFinite(quantita) || quantita <= 0) {
+      alert('Seleziona un articolo e inserisci una quantità valida.');
+      return;
+    }
+    submit.disabled = true;
+    try {
+      await fetchJson(API.movimenti, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articoloId, quantita, tipo, note: note.value?.trim() || null })
+      });
+      closeModal();
+      alert('Movimento registrato.');
+      // Se esistono, aggiorna i pannelli
+      (window.loadInventario?.bind(window) || (()=>{}))();
+      (window.loadKpiMagazzino?.bind(window) || (()=>{}))();
+      (window.loadSottoSoglia?.bind(window) || (()=>{}))();
+    } catch (err) {
+      console.error('Errore creazione movimento', err);
+      alert('Errore durante il salvataggio del movimento.');
+    } finally {
+      submit.disabled = false;
+    }
+  });
+})();

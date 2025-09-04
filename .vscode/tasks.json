@@ -2,27 +2,21 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Check: Duplicati (rotte)",
-      "type": "shell",
-      "command": "node",
-      "args": ["scripts/check-duplicates.js"],
-      "group": "build"
-    },
-    {
-      "label": "Dup: Watch (auto)",
-      "type": "shell",
-      "command": "node",
-      "args": ["scripts/dup-watch.js"],
-      "isBackground": true,
-      "runOptions": { "runOn": "folderOpen" },
-      "presentation": { "reveal": "never", "panel": "dedicated" }
-    },
-    {
       "label": "Guard (pre-change)",
       "type": "npm",
       "script": "guard",
+      "options": { "shell": { "executable": "C:\\Windows\\System32\\cmd.exe", "args": ["/d", "/c"] } },
       "runOptions": { "runOn": "folderOpen" },
-      "presentation": { "reveal": "never", "panel": "dedicated" }
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Dup: Watch (auto)",
+      "type": "npm",
+      "script": "dup:watch",
+      "isBackground": true,
+      "options": { "shell": { "executable": "C:\\Windows\\System32\\cmd.exe", "args": ["/d", "/c"] } },
+      "runOptions": { "runOn": "folderOpen" },
+      "presentation": { "reveal": "always", "panel": "dedicated" }
     }
   ]
 }

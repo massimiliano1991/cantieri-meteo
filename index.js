@@ -1,5 +1,5 @@
 require("dotenv").config();
-const express = require("express");
+const express = require('express');
 const path = require("path");
 const cors = require("cors");
 const { MODULO_ORE_ATTIVO } = require('./config');
@@ -11,7 +11,7 @@ const cantieriRoutes = require("./moduli/cantieri/cantieriRoutes.js");
 const dipendentiRoutes = require('./routes/dipendenti.js');
 const dashboardRoutes = require('./routes/dashboard.js');
 const scadenzeRoutes = require('./routes/scadenze.js');
-const magazzinoRoutes = require('./routes/magazzino'); 
+const magazzinoRouter = require('./moduli/magazzino/magazzinoRoutes');
 const oreRoutes = require('./moduli/ore-lavorative/oreRoutes.js');
 
 // --- 2. CREAZIONE E CONFIGURAZIONE APP EXPRESS ---
@@ -19,7 +19,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // <= necessario per leggere il body JSON
 app.use(express.urlencoded({ extended: true }));
 
 // --- 3. GESTIONE FILE STATICI ---
@@ -34,7 +34,7 @@ app.use("/cantieri", cantieriRoutes);
 app.use('/dipendenti', dipendentiRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.use('/scadenze', scadenzeRoutes);
-app.use('/magazzino', magazzinoRoutes);
+app.use('/magazzino', magazzinoRouter);
 if (MODULO_ORE_ATTIVO) {
   app.use('/ore', oreRoutes);
 }

@@ -32,6 +32,40 @@
         </main>
     </div>
 
+    <!-- Modal Movimento Rapido -->
+    <div id="mr-backdrop" style="display:none;position:fixed;inset:0;background:#0008;z-index:1000;">
+      <div style="max-width:520px;margin:6rem auto;background:#fff;border-radius:8px;padding:16px">
+        <h3 style="margin:0 0 8px">Movimento Rapido</h3>
+        <form id="mr-form">
+          <div style="margin:8px 0">
+            <label>Articolo</label>
+            <select id="mr-articolo" required style="width:100%"></select>
+          </div>
+          <div style="margin:8px 0;display:flex;gap:8px">
+            <div style="flex:1">
+              <label>Quantità</label>
+              <input id="mr-quantita" type="number" min="1" step="1" required style="width:100%">
+            </div>
+            <div style="flex:1">
+              <label>Tipo</label>
+              <div>
+                <label><input type="radio" name="mr-tipo" value="entrata" checked> Entrata</label>
+                <label style="margin-left:12px"><input type="radio" name="mr-tipo" value="uscita"> Uscita</label>
+              </div>
+            </div>
+          </div>
+          <div style="margin:8px 0">
+            <label>Note</label>
+            <input id="mr-note" type="text" maxlength="255" placeholder="facoltativo" style="width:100%">
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+            <button type="button" id="mr-cancel">Annulla</button>
+            <button type="submit" id="mr-submit" class="primary">Salva</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script src="main.js"></script>
     <script src="magazzino.js"></script>
 </body>
